@@ -45,5 +45,7 @@ cli.py           check | ask | eval
 configs/         baseline.yaml (offline stand-ins), ollama.yaml (real run)
 rag/             chunking, embeddings (Ollama + disk cache), retrieval (BM25, dense, hybrid RRF, ACL pre-filter, rerankers), llm, pipeline, metrics, telemetry
 tests/           stand-in Ollama server + tests
-PROGRESS.md      handoff notes: done / next / pending
+PROJECT_GOAL.md  what we are building and when it is done
+HANDOFF.md       living status: what is done, what is next (update after every task)
+docs/sections/   one brief per work section (S1..S8); docs/results/ holds final result tables
 ```
