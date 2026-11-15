@@ -1,0 +1,6 @@
+{
+ "id": "fin-01",
+ "title": "Expense Policy",
+ "access": "employee",
+ "text": "Meal expenses are capped at 800 rupees per day. Receipts are mandatory for any expense above 250 rupees. Expense claims must be submitted within 30 days of the expense.\n\nManagers can approve expenses up to 10000 rupees. Anything above that needs finance approval."
+}

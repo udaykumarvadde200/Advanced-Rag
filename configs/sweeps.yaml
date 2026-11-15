@@ -1,0 +1,17 @@
+# Retrieval sweeps (no LLM needed). Run: python cli.py sweep
+chunking:
+  - {strategy: fixed,     size: 200, overlap: 40}
+  - {strategy: fixed,     size: 400, overlap: 80}
+  - {strategy: recursive, size: 200}
+  - {strategy: recursive, size: 300}
+  - {strategy: recursive, size: 500}
+  - {strategy: sentence}
+retrievers: [bm25, dense, hybrid]
+embedders:
+  - {type: ollama, model: nomic-embed-text}
+  # - {type: ollama, model: mxbai-embed-large}   # ollama pull mxbai-embed-large
+  # - {type: ollama, model: all-minilm}          # ollama pull all-minilm
+rerankers:
+  - {type: none}
+  - {type: lexical}
+  # - {type: ollama, model: llama3.2:3b}         # slow: one LLM call per candidate chunk

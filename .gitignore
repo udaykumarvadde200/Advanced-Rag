@@ -1,0 +1,15 @@
+# environments and caches
+.venv/
+venv/
+__pycache__/
+*.pyc
+.cache/
+.pytest_cache/
+# run outputs (regenerate with cli.py); frozen baselines go in baselines/ and ARE tracked
+results/*
+!results/.gitkeep
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

@@ -1,0 +1,6 @@
+{
+ "id": "eng-05",
+ "title": "Code Review Standards",
+ "access": "eng",
+ "text": "Pull requests should stay under 400 changed lines. Reviewers must respond within 1 business day.\n\nEvery pull request needs at least 2 approvals before merging."
+}

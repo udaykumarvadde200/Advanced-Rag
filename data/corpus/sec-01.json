@@ -1,0 +1,6 @@
+{
+ "id": "sec-01",
+ "title": "Information Security Policy",
+ "access": "employee",
+ "text": "Passwords must be at least 14 characters long. Multi-factor authentication is mandatory for all company accounts. All laptops must use full disk encryption.\n\nSuspected phishing emails must be reported to security@acme-fake.test within 1 hour."
+}

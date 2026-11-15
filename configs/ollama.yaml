@@ -1,0 +1,6 @@
+# Ollama-only config. Pull first:  ollama pull llama3.2:3b && ollama pull nomic-embed-text
+chunking:  {strategy: recursive, size: 300, overlap: 0}
+embedder:  {type: ollama, model: nomic-embed-text, cache_dir: .cache}
+retriever: {mode: hybrid, k: 4, pool: 20, enforce_acl: true}
+reranker:  {type: none}            # or: {type: ollama, model: llama3.2:3b}  (slow, one LLM call per chunk)
+llm:       {type: ollama, model: llama3.2:3b, seed: 42, num_ctx: 4096, keep_alive: 5m, num_predict: 256}

@@ -1,0 +1,6 @@
+{
+ "id": "sec-02",
+ "title": "Data Classification Policy",
+ "access": "employee",
+ "text": "Company data is classified as Public, Internal, Confidential or Restricted. Restricted data must be encrypted at rest and may not be emailed.\n\nConfidential documents must be shared only with named recipients."
+}

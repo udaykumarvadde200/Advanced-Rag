@@ -1,0 +1,6 @@
+{
+ "id": "hr-08",
+ "title": "Employee Referral Bonus",
+ "access": "employee",
+ "text": "Employees receive a referral bonus of 25000 rupees for each successful hire. The bonus is paid after the new hire completes 90 days.\n\nNo referral bonus is paid for hires at Level 5 or above."
+}

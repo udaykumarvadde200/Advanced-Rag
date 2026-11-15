@@ -1,0 +1,6 @@
+{
+ "id": "eng-02",
+ "title": "Deployment Policy",
+ "access": "eng",
+ "text": "Production deployments are allowed Tuesday to Thursday only. A deployment freeze applies from December 20 to January 3.\n\nEvery deployment needs two code review approvals. New releases first go to a canary group of 10 percent of traffic for 30 minutes."
+}

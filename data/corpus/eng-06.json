@@ -1,0 +1,6 @@
+{
+ "id": "eng-06",
+ "title": "Data Retention Policy",
+ "access": "eng",
+ "text": "Application logs are retained for 90 days. Audit logs are retained for 2 years.\n\nCustomer data is deleted within 30 days of contract termination."
+}

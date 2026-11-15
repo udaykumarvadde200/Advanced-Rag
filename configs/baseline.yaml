@@ -1,0 +1,7 @@
+# Baseline config. Offline stand-ins (hash / mock) let the harness run anywhere.
+# For real runs set: embedder: {type: st, model: BAAI/bge-small-en-v1.5}  and  llm: {type: ollama, model: llama3.1:8b}
+chunking:  {strategy: recursive, size: 300, overlap: 0}
+embedder:  {type: hash, dim: 512}
+retriever: {mode: hybrid, k: 4, pool: 20, enforce_acl: true}
+reranker:  {type: none}
+llm:       {type: mock, naive: false}

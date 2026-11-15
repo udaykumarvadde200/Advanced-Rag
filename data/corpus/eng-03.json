@@ -1,0 +1,6 @@
+{
+ "id": "eng-03",
+ "title": "API Rate Limits",
+ "access": "eng",
+ "text": "The standard API plan allows 1000 requests per minute. The enterprise plan allows 5000 requests per minute.\n\nWhen a client receives HTTP status 429 it should retry using exponential backoff starting at 2 seconds."
+}
