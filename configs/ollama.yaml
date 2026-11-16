@@ -1,3 +1,8 @@
+# DEFAULT RETRIEVAL CONFIG - decided in S1 (evidence: docs/results/S1_sweeps.md). Kept UNCHANGED on purpose:
+#  - 60 sweep configs on 69 answerable questions: no difference versus the best BM25 row was significant (no paired 95% interval excluded 0; best sign-test p = 0.22).
+#  - Picking the top row (dense, MRR 0.993) out of 60 would be choosing noise; changing the default would also invalidate baseline_v2 for no proven gain.
+#  - hybrid keeps lexical matching for exact terms/IDs that dense embeddings can miss; recursive-300 (== recursive-500 here, docs are <= 446 chars);
+#    no reranker (no measured gain, extra code path); nomic task prefixes OFF (+0.000 to +0.014 MRR, never significant). Revisit on a bigger corpus (S7).
 # Ollama-only config. Pull first:  ollama pull llama3.2:3b && ollama pull nomic-embed-text
 chunking:  {strategy: recursive, size: 300, overlap: 0}
 embedder:  {type: ollama, model: nomic-embed-text, cache_dir: .cache}

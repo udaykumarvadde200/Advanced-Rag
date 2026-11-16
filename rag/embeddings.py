@@ -33,12 +33,17 @@ class EmbCache:
             self.dirty = False
 
 class OllamaEmbedder:
-    """Local Ollama embeddings (e.g. nomic-embed-text, mxbai-embed-large, bge-m3). Batched + disk-cached."""
-    def __init__(self, model="nomic-embed-text", host=None, cache_dir=".cache", batch=32):
-        self.name = self.model = model; self.host = host or oc.DEFAULT_HOST; self.batch = batch
+    """Local Ollama embeddings (e.g. nomic-embed-text, mxbai-embed-large, bge-m3). Batched + disk-cached.
+    Optional task prefixes (nomic-embed-text was trained with 'search_document: ' / 'search_query: '): doc_prefix is added to texts embedded with
+    cache=True (chunks), query_prefix to texts embedded with cache=False (queries) - the convention retrieval.py already follows. The prefix is applied
+    BEFORE the cache lookup, so prefixed and unprefixed vectors never collide in the disk cache."""
+    def __init__(self, model="nomic-embed-text", host=None, cache_dir=".cache", batch=32, query_prefix="", doc_prefix=""):
+        self.name = self.model = model; self.host = host or oc.DEFAULT_HOST; self.batch = batch; self.query_prefix, self.doc_prefix = query_prefix or "", doc_prefix or ""
+        if self.query_prefix or self.doc_prefix: self.name = model + "+prefix"
         self.cache = EmbCache(cache_dir, model); self.api_calls = 0
     def embed(self, texts, cache=True):
         """cache=False bypasses the disk cache (used for queries, so latency measurements stay honest)."""
+        pre = self.doc_prefix if cache else self.query_prefix; texts = [pre + t for t in texts]
         vecs, todo = [None] * len(texts), []
         for i, t in enumerate(texts):
             v = self.cache.get(t) if cache else None
@@ -56,5 +61,6 @@ class OllamaEmbedder:
 def make_embedder(cfg):
     kind = cfg.get("type", "ollama")
     if kind == "hash": return HashEmbedder(cfg.get("dim", 512))
-    if kind == "ollama": return OllamaEmbedder(cfg["model"], cfg.get("host"), cfg.get("cache_dir", ".cache"), cfg.get("batch", 32))
+    if kind == "ollama": return OllamaEmbedder(cfg["model"], cfg.get("host"), cfg.get("cache_dir", ".cache"), cfg.get("batch", 32),
+                                                  cfg.get("query_prefix", ""), cfg.get("doc_prefix", ""))
     raise ValueError(f"unknown embedder type '{kind}' (use 'ollama' or 'hash')")

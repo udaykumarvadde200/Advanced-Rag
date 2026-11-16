@@ -8,10 +8,14 @@ class Chunk:
 def _sentences(t): return [s.strip() for s in re.split(r"(?<=[.!?])\s+", t) if s.strip()]
 
 def chunk_fixed(text, size=200, overlap=40):
+    """Sliding window of `size` chars advancing by size - overlap; stops at the first window that reaches the end of the text,
+    so there is never a redundant tail chunk. Requires 0 <= overlap < size."""
+    if not 0 <= overlap < size: raise ValueError(f"fixed chunking needs 0 <= overlap < size (got size={size}, overlap={overlap})")
     out, i = [], 0
     while i < len(text):
-        out.append(text[i:i + size]); i += max(1, size - overlap)
-        if i - overlap + size >= len(text) and out[-1] == text[i - size + overlap:]: break
+        out.append(text[i:i + size])
+        if i + size >= len(text): break
+        i += size - overlap
     return out
 
 def chunk_recursive(text, size=300, overlap=0):

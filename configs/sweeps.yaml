@@ -8,7 +8,8 @@ chunking:
   - {strategy: sentence}
 retrievers: [bm25, dense, hybrid]
 embedders:
-  - {type: ollama, model: nomic-embed-text}
+  - {type: ollama, model: nomic-embed-text}                                                    # reference embedder (first = the one others are compared with)
+  - {type: ollama, model: nomic-embed-text, query_prefix: "search_query: ", doc_prefix: "search_document: "}   # S1 task 4: task prefixes
   # - {type: ollama, model: mxbai-embed-large}   # ollama pull mxbai-embed-large
   # - {type: ollama, model: all-minilm}          # ollama pull all-minilm
 rerankers:
