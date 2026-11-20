@@ -3,6 +3,7 @@
   python cli.py ask "question" --role employee [--config ...]  ask one question
   python cli.py eval [--config ...] [--limit N] [--out results/run.json]   run the golden set
   python cli.py sweep [--offline] [--retrievers bm25,dense,hybrid]          retrieval sweeps -> results/sweeps.md
+  python cli.py safety [--offline] [--no-proof] [--out results/safety.json] [--md results/safety.md]   safety suite (exit 1 = ACL violation, 2 = detection proof failed)
 """
 import argparse, json, os, sys, time
 from rag.pipeline import RAG, load_cfg, load_golden, ROLES
@@ -52,18 +53,23 @@ def cmd_eval(cfg, limit, out):
     print("latency", summ["latency"]); print("saved ->", out)
 
 if __name__ == "__main__":
-    ap = argparse.ArgumentParser(); ap.add_argument("cmd", choices=["check", "ask", "eval", "sweep"]); ap.add_argument("question", nargs="?")
+    ap = argparse.ArgumentParser(); ap.add_argument("cmd", choices=["check", "ask", "eval", "sweep", "safety"]); ap.add_argument("question", nargs="?")
     ap.add_argument("--config", default="configs/ollama.yaml"); ap.add_argument("--role", default="employee", choices=list(ROLES))
     ap.add_argument("--limit", type=int); ap.add_argument("--sweep-config", default="configs/sweeps.yaml"); ap.add_argument("--sweep-out", default="results/sweeps")
-    ap.add_argument("--offline", action="store_true", help="sweep with the hash embedder (no Ollama)"); ap.add_argument("--retrievers", help="comma list, e.g. bm25,hybrid"); ap.add_argument("--out", default="results/run.json"); a = ap.parse_args()
+    ap.add_argument("--offline", action="store_true", help="sweep with the hash embedder (no Ollama)"); ap.add_argument("--retrievers", help="comma list, e.g. bm25,hybrid"); ap.add_argument("--out", default=None); ap.add_argument("--md", default="results/safety.md"); ap.add_argument("--no-proof", action="store_true", help="safety: skip the detection-proof runs"); a = ap.parse_args()
     cfg = load_cfg(a.config)
     try:
         if a.cmd == "check": sys.exit(cmd_check(cfg))
         if a.cmd == "sweep":
             from eval.run_sweeps import run_from_config
             sys.exit(run_from_config(a.sweep_config, a.sweep_out, a.offline, a.retrievers.split(",") if a.retrievers else None))
-        miss = oc.missing_models(needed_models(cfg)) if needed_models(cfg) else []
+        if a.cmd == "safety" and a.offline: miss = []
+        else: miss = oc.missing_models(needed_models(cfg)) if needed_models(cfg) else []
         if miss: sys.exit("Missing Ollama models. Run:\n" + "\n".join(f"  ollama pull {m}" for m in miss))
+        if a.cmd == "safety":
+            from eval.run_safety import run_all, console_summary, save, exit_code
+            res = run_all(cfg, offline=a.offline, proof=not a.no_proof, log=lambda m: None if m.startswith("  ") else print(m, flush=True))
+            save(res, a.out or "results/safety.json", a.md); console_summary(res); print("saved ->", a.out or "results/safety.json", "and", a.md); sys.exit(exit_code(res))
         if a.cmd == "ask": cmd_ask(cfg, a.question or sys.exit("give a question"), a.role)
-        else: cmd_eval(cfg, a.limit, a.out)
+        else: cmd_eval(cfg, a.limit, a.out or "results/run.json")
     except oc.OllamaError as e: sys.exit(f"Ollama error: {e}")

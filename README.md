@@ -22,6 +22,8 @@ python cli.py eval --limit 10                         # quick run on the golden 
 python cli.py eval --out results/baseline.json        # full golden set (82 questions)
 python cli.py sweep                                   # retrieval sweeps -> results/sweeps.md (needs nomic-embed-text)
 python cli.py sweep --offline --retrievers bm25       # no Ollama needed
+python cli.py safety                                  # safety suite + detection proof -> results/safety.json, results/safety.md (exit 1 = ACL leak, 2 = proof failed)
+python cli.py safety --offline                        # same plumbing with stand-ins (NOT model results)
 ```
 Switch models by editing `configs/ollama.yaml` (e.g. `llama3.2:3b` -> `qwen2.5:7b`). A 7-8B model may be partly offloaded to CPU on 6 GB VRAM: slower but workable.
 `keep_alive: 0` unloads a model right after use, useful when later swapping generator and judge models.
@@ -41,7 +43,7 @@ These run the real Ollama client code against a stand-in HTTP server (`tests/fak
 ```
 build_data.py    synthetic corpus (30 docs), golden questions (82), safety cases; build_data_extra.py holds the harder docs/questions
 eval/run_sweeps.py  chunking x retriever x embedder x reranker sweeps
-cli.py           check | ask | eval
+cli.py           check | ask | eval | sweep | safety
 configs/         baseline.yaml (offline stand-ins), ollama.yaml (real run)
 rag/             chunking, embeddings (Ollama + disk cache), retrieval (BM25, dense, hybrid RRF, ACL pre-filter, rerankers), llm, pipeline, metrics, telemetry
 tests/           stand-in Ollama server + tests
