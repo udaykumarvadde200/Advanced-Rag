@@ -1,3 +1,5 @@
 numpy
 pyyaml
 requests
+# evaluation only (S4 LLM judge; the RAG pipeline does not import it):
+deepeval

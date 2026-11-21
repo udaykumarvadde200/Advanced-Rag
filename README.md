@@ -58,3 +58,7 @@ PROJECT_GOAL.md  what we are building and when it is done
 HANDOFF.md       living status: what is done, what is next (update after every task)
 docs/sections/   one brief per work section (S1..S8); docs/results/ holds final result tables
 ```
+
+## LLM judge (S4)
+`pip install deepeval` (evaluation only), `ollama pull qwen2.5:7b`, then: `python cli.py judge --probe` (speed / VRAM / structured-output check), `python cli.py judge --make-labels` (30 real answers to label, guide in `data/labels/LABELING_GUIDE.md`),
+`python cli.py judge --validate` (agreement, Cohen's kappa, 3-run variance), `python cli.py judge` (judge scores for the golden set). Settings: `configs/judge.yaml`. Details and results: `docs/results/S4_judge.md`.

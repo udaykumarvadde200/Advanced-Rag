@@ -1,0 +1,18 @@
+# LLM judge settings (S4). Judge model must differ from the generator (configs/ollama.yaml: llama3.2:3b).
+# Measure first:  python cli.py judge --probe   (tokens/s, share in VRAM, structured-output support)
+judge:
+  model: qwen2.5:7b        # partly offloaded on a 6 GB GPU if it does not fit: check --probe; fallback for speed: qwen2.5:3b (weaker judge)
+  temperature: 0
+  seed: 42
+  num_ctx: 4096            # Ollama silently truncates longer prompts: the run reports how many came close to this limit
+  num_predict: 1024
+  keep_alive: 10m
+  json_mode: schema        # schema (Ollama >= 0.5 structured outputs) | json (older Ollama) | none
+  attempts: 2              # 1 repair retry when the reply is not valid JSON
+candidates: [qwen2.5:7b, llama3.1:8b]        # compared by --probe
+metrics: [faithfulness, answer_relevancy, correctness]   # also available: injection_obedience, toxicity (opt in with --metrics)
+# Pass thresholds. Fixed BEFORE seeing any validation result; do not tune them on the human labels (the validation report shows a sweep as an in-sample diagnostic).
+thresholds: {faithfulness: 0.8, answer_relevancy: 0.7, correctness: 0.5, injection_obedience: 0.5, toxicity: 0.5}
+labels: {file: data/labels/human_labels_template.csv, seed: 7}
+runs: 3                    # judge runs for the variance estimate (seeds 42, 43, 44)
+cache: .cache/judge/calls.jsonl   # judge replies, so an interrupted run resumes; --no-cache to disable

@@ -5,6 +5,7 @@
   python cli.py sweep [--offline] [--retrievers bm25,dense,hybrid]          retrieval sweeps -> results/sweeps.md
   python cli.py regress --save-baseline baselines/v1.json | --compare baselines/v1.json | --noise-study 3   [--offline] [--no-safety] [--set a.b=c ...]   regression gate (exit 1 = a gate failed, 2 = invalid comparison)
   python cli.py safety [--offline] [--no-proof] [--out results/safety.json] [--md results/safety.md]   safety suite (exit 1 = ACL violation, 2 = detection proof failed)
+  python cli.py judge --probe | --make-labels | --annotate | --validate [--runs 3] | [--metrics faithfulness,answer_relevancy,correctness] [--limit N]   LLM judge (S4; needs `pip install deepeval`)
 """
 import argparse, json, os, sys, time
 from rag.pipeline import RAG, load_cfg, load_golden, ROLES
@@ -41,13 +42,18 @@ def cmd_eval(cfg, limit, out):
     print("latency", summ["latency"]); print("saved ->", out)
 
 if __name__ == "__main__":
-    ap = argparse.ArgumentParser(); ap.add_argument("cmd", choices=["check", "ask", "eval", "sweep", "safety", "regress"]); ap.add_argument("question", nargs="?")
+    ap = argparse.ArgumentParser(); ap.add_argument("cmd", choices=["check", "ask", "eval", "sweep", "safety", "regress", "judge"]); ap.add_argument("question", nargs="?")
     ap.add_argument("--config", default="configs/ollama.yaml"); ap.add_argument("--role", default="employee", choices=list(ROLES))
     ap.add_argument("--limit", type=int); ap.add_argument("--sweep-config", default="configs/sweeps.yaml"); ap.add_argument("--sweep-out", default="results/sweeps")
     ap.add_argument("--offline", action="store_true", help="sweep with the hash embedder (no Ollama)"); ap.add_argument("--retrievers", help="comma list, e.g. bm25,hybrid"); ap.add_argument("--out", default=None); ap.add_argument("--md", default=None); ap.add_argument("--no-proof", action="store_true", help="safety: skip the detection-proof runs"); 
     ap.add_argument("--save-baseline"); ap.add_argument("--compare"); ap.add_argument("--noise-study", type=int, metavar="N"); ap.add_argument("--tolerances", default="configs/tolerances.yaml")
     ap.add_argument("--no-safety", action="store_true", help="regress: skip the safety suite (baseline and compare must both skip it)"); ap.add_argument("--hardware", help="regress: hardware note stored in the baseline")
-    ap.add_argument("--set", dest="sets", action="append", help="regress: override a config key, e.g. --set retriever.enforce_acl=false (repeatable)"); ap.add_argument("--label", default=""); a = ap.parse_args()
+    ap.add_argument("--set", dest="sets", action="append", help="regress: override a config key, e.g. --set retriever.enforce_acl=false (repeatable)"); ap.add_argument("--label", default="")
+    ap.add_argument("--judge-config", default="configs/judge.yaml"); ap.add_argument("--labels", help="judge: human labels CSV (default from the judge config)"); ap.add_argument("--runs", type=int, help="judge --validate: number of judge runs (default 3)")
+    ap.add_argument("--probe", action="store_true", help="judge: speed/VRAM/structured-output check of the candidate judge models"); ap.add_argument("--make-labels", action="store_true", help="judge: build the human-label CSV from real answers")
+    ap.add_argument("--annotate", action="store_true", help="judge: label the CSV in the terminal (keys 1-5), resumable"); ap.add_argument("--validate", action="store_true", help="judge: agreement/kappa/variance against the human labels"); ap.add_argument("--metrics", help="judge: comma list, from faithfulness,answer_relevancy,correctness,injection_obedience,toxicity")
+    ap.add_argument("--temperature", type=float, help="judge: override the judge temperature"); ap.add_argument("--no-cache", action="store_true", help="judge: ignore the judge call cache"); ap.add_argument("--force", action="store_true", help="judge --make-labels: overwrite a labeled CSV")
+    a = ap.parse_args()
     cfg = load_cfg(a.config)
     if a.cmd == "regress":
         from eval.regression import apply_overrides
@@ -56,6 +62,12 @@ if __name__ == "__main__":
         cfg = apply_overrides(cfg, a.sets)
     try:
         if a.cmd == "check": sys.exit(cmd_check(cfg))
+        if a.cmd == "judge":
+            if not (a.probe or a.make_labels or a.annotate):                         # scoring and validation need DeepEval; probing and label-making do not
+                try: import deepeval  # noqa: F401
+                except ImportError: sys.exit("DeepEval is not installed. In the venv run: pip install deepeval")
+            from eval.judge import run_cli
+            sys.exit(run_cli(cfg, a))
         if a.cmd == "sweep":
             from eval.run_sweeps import run_from_config
             sys.exit(run_from_config(a.sweep_config, a.sweep_out, a.offline, a.retrievers.split(",") if a.retrievers else None))

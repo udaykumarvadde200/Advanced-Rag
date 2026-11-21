@@ -45,8 +45,11 @@ def missing_models(needed, host=None):
         if m not in have and (m if ":" in m else m + ":latest") not in have: out.append(m)
     return out
 
-def chat(host, model, messages, options=None, keep_alive="5m", timeout=600):
-    return _post(host, "/api/chat", dict(model=model, messages=messages, stream=False, options=options or {}, keep_alive=keep_alive), timeout)
+def chat(host, model, messages, options=None, keep_alive="5m", timeout=600, fmt=None):
+    """fmt: None (free text), "json", or a JSON-schema dict (Ollama structured outputs; the judge uses it)."""
+    body = dict(model=model, messages=messages, stream=False, options=options or {}, keep_alive=keep_alive)
+    if fmt is not None: body["format"] = fmt
+    return _post(host, "/api/chat", body, timeout)
 
 def embed(host, model, texts, timeout=300):
     return _post(host, "/api/embed", dict(model=model, input=list(texts)), timeout)["embeddings"]
