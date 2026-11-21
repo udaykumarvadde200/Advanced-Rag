@@ -24,6 +24,11 @@ python cli.py sweep                                   # retrieval sweeps -> resu
 python cli.py sweep --offline --retrievers bm25       # no Ollama needed
 python cli.py safety                                  # safety suite + detection proof -> results/safety.json, results/safety.md (exit 1 = ACL leak, 2 = proof failed)
 python cli.py safety --offline                        # same plumbing with stand-ins (NOT model results)
+python cli.py regress --save-baseline baselines/v1.json    # freeze golden + safety results (refuses a baseline that leaks or breaks a floor)
+python cli.py regress --compare baselines/v1.json          # exit 0 PASS / 1 FAIL (gate named) / 2 invalid comparison; report in results/regress.md
+python cli.py regress --compare baselines/v1.json --set retriever.enforce_acl=false   # deliberate break: must FAIL on safety
+python cli.py regress --noise-study 3                      # run-to-run variance (justifies configs/tolerances.yaml)
+python cli.py regress --offline --compare <offline baseline>   # stand-ins, plumbing only
 ```
 Switch models by editing `configs/ollama.yaml` (e.g. `llama3.2:3b` -> `qwen2.5:7b`). A 7-8B model may be partly offloaded to CPU on 6 GB VRAM: slower but workable.
 `keep_alive: 0` unloads a model right after use, useful when later swapping generator and judge models.
@@ -43,7 +48,9 @@ These run the real Ollama client code against a stand-in HTTP server (`tests/fak
 ```
 build_data.py    synthetic corpus (30 docs), golden questions (82), safety cases; build_data_extra.py holds the harder docs/questions
 eval/run_sweeps.py  chunking x retriever x embedder x reranker sweeps
-cli.py           check | ask | eval | sweep | safety
+eval/run_safety.py  safety suite (ACL, injection, PII, jailbreak, abstention)
+eval/regression.py  regression gate (baseline, tolerances, flipped questions, exit code); rules in configs/tolerances.yaml
+cli.py           check | ask | eval | sweep | safety | regress
 configs/         baseline.yaml (offline stand-ins), ollama.yaml (real run)
 rag/             chunking, embeddings (Ollama + disk cache), retrieval (BM25, dense, hybrid RRF, ACL pre-filter, rerankers), llm, pipeline, metrics, telemetry
 tests/           stand-in Ollama server + tests

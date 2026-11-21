@@ -32,6 +32,13 @@ def list_models(host=None):
     except requests.ConnectionError as e: raise OllamaError(f"Cannot reach Ollama at {host}. Start it with: ollama serve") from e
     return [m["name"] for m in r.json().get("models", [])]
 
+def model_digests(host=None):
+    """{model name: digest} from /api/tags (used to pin the exact model files in a regression baseline)."""
+    host = _norm(host or DEFAULT_HOST)
+    try: r = requests.get(f"{host}/api/tags", timeout=10); r.raise_for_status()
+    except requests.ConnectionError as e: raise OllamaError(f"Cannot reach Ollama at {host}. Start it with: ollama serve") from e
+    return {m["name"]: m.get("digest", "") for m in r.json().get("models", [])}
+
 def missing_models(needed, host=None):
     have = set(list_models(host)); out = []
     for m in needed:
