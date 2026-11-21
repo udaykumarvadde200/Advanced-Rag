@@ -22,7 +22,7 @@ To keep context small: one section per conversation, upload the zip (do not past
 | S1 | Real baseline + retrieval sweeps | DONE (tag s1 = commit 0eb56c8, pushed to GitHub) |
 | S2 | Safety suite | DONE (real run: ACL violations 0; tag s2 = commit 5acc250) |
 | S3 | Regression gate | DONE (real baseline `baselines/v1.json`, noise study, 4 break runs; tag s3 = commit ec2deaf) |
-| S4 | LLM judge + judge validation | NEARLY DONE (2026-11-21): code, 51 offline tests, real probe/labels/validation run recorded in `docs/results/S4_judge.md`; open: per-run correctness agreement (re-run `--validate`, cached) and the user's go-ahead, then tag s4. Finding: judge NOT trusted as a gate |
+| S4 | LLM judge + judge validation | DONE (2026-11-21): code, 51 offline tests, real validation in `docs/results/S4_judge.md`. Finding: judge is advisory only (correctness kappa 0.55-0.65, wide CI; faithfulness/relevancy unvalidated). Tag s4 = the user's commit after this update |
 | S5 | Generation evaluation + failure attribution | NOT STARTED |
 | S6 | Advanced features + ablations | NOT STARTED |
 | S7 | Dataset decision (optional) | NOT STARTED (FinanceBench was discussed; on hold) |
@@ -51,9 +51,8 @@ To keep context small: one section per conversation, upload the zip (do not past
   (documents too short to stress chunking); paraphrase questions are BM25's weak spot (hit@3 0.75-0.875, n=8). Hypothesis (untested): dense/hybrid improves paraphrase.
 
 ## Pending user actions
-1. Replace the project files with the newest zip (robocopy as before, exclude .git .venv .cache results), `python -m unittest` (expect 117 OK), then `python cli.py judge --validate` again (served from the call cache, ~1 min) and paste the line starting `correctness by run`.
-2. Paste the disagreement table from `results\judge_validation.md` (Human vs judge disagreements) so the 6-vs-5 abstention count and the false alarms can be checked.
-3. Add `.deepeval/` to `.gitignore` (DeepEval created it). Commit (labeled CSV included); tag `s4` once the doc is final. `origin` = github.com/udaykumarvadde200/Advanced-Rag; never `git pull`/`--force`.
+1. Copy the newest zip over the project (robocopy, exclude .git .venv .cache results), `python -m unittest` (expect 117 OK). Do NOT overwrite `data/labels/human_labels_template.csv` (the zip does not contain it).
+2. `Add-Content .gitignore ".deepeval/"`, then `git add -A`, `git commit -m "S4: LLM judge + validation (advisory only)"`, `git tag s4`. `origin` = github.com/udaykumarvadde200/Advanced-Rag; never `git pull`/`--force`.
 
 ## Completed log (newest last)
 ### 2026-11-15 - S0 Foundation (tag s0-foundation, plus the docs commit that follows it)
@@ -102,10 +101,12 @@ To keep context small: one section per conversation, upload the zip (do not past
 - Validation (n=30 labels; 16 correct / 5 incorrect / 4 evasive / 5 properly_abstained / 0 hallucinated): correctness agreement 0.79 (kappa 0.55, CI 0.14-0.88) vs keyword metric 0.92 (kappa 0.82) on the same 24 items; five-class agreement 0.70 (kappa 0.55); faithfulness and relevancy NOT estimable (no hallucinated example, one irrelevant example); faithfulness false-alarmed on 3 of 16 correct answers; correctness verdicts flip on 3 of 22 judged items across seeds even at temperature 0. Details and caveats (labels made with Claude's per-row guidance) in `docs/results/S4_judge.md`.
 - Added after the run: per-run correctness agreement + median-of-runs verdict in the report (51 judge tests, 117 total); numbers pending the user's cached re-run.
 
+### 2026-11-21 - S4 closed
+- Re-run after relabeling q040 (evasive -> properly_abstained) and q003 (evasive -> incorrect), done after the user saw the judge disagreement table (disclosed in the doc; both moves favour the judge). Final: five-class agreement 0.77 [0.59, 0.88], kappa 0.65 [0.41, 0.85] (before relabel 0.70 / 0.55); correctness unchanged: agreement 0.79 (per seed 0.79 / 0.83 / 0.83, median of runs 0.83), kappa 0.55 [0.14, 0.88], keyword metric 0.92 / 0.82 on the same 24 items; relevancy now has zero negative labels as well as faithfulness (both not estimable). Decision recommended: judge advisory, no baseline v2.
+
 ## Next
-1. User: Pending user actions (cached re-run, paste disagreements, commit).
-2. Next conversation: write the per-run numbers into `docs/results/S4_judge.md`, confirm with the user that the judge stays advisory (no baseline v2), tag s4.
-3. S5 (generation failures): start with validating `injection_obedience` against the S2 canary outcomes (needs `eval/run_safety.py`), and label S5's hallucinated/failed answers to validate faithfulness properly.
+1. S5 (generation failures; brief `docs/sections/S5_generation_failures.md`). Start with: (a) validate `injection_obedience` against the S2 canary outcomes (needs `eval/run_safety.py`); (b) obtain failures that include hallucinations and label them, so faithfulness can finally be validated; (c) optionally test cleaning citations/number formats before judging on NEW labels.
+2. Then S6, S7 (dataset decision), S8 (final report).
 
 ## Open issues / known gaps
 - Correctness = keyword match (strict; q035 miss is partly the metric). Groundedness = token-overlap proxy (counts citation text as ungrounded). Both are crude until S4/S5.
