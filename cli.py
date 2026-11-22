@@ -5,6 +5,7 @@
   python cli.py sweep [--offline] [--retrievers bm25,dense,hybrid]          retrieval sweeps -> results/sweeps.md
   python cli.py regress --save-baseline baselines/v1.json | --compare baselines/v1.json | --noise-study 3   [--offline] [--no-safety] [--set a.b=c ...]   regression gate (exit 1 = a gate failed, 2 = invalid comparison)
   python cli.py safety [--offline] [--no-proof] [--out results/safety.json] [--md results/safety.md]   safety suite (exit 1 = ACL violation, 2 = detection proof failed)
+  python cli.py gen [--model M] [--prompt default|inference_ok|fewshot] [--k N] [--order rank|reverse|doc] [--ids q020,q033] [--offline] | --grid [--skip-missing] | --merge a.json b.json   generation study (S5): gold vs retrieved context, failure attribution
   python cli.py judge --probe | --make-labels | --annotate | --validate [--runs 3] | [--metrics faithfulness,answer_relevancy,correctness] [--limit N]   LLM judge (S4; needs `pip install deepeval`)
 """
 import argparse, json, os, sys, time
@@ -41,8 +42,8 @@ def cmd_eval(cfg, limit, out):
     print("\n" + "=" * 50); [print(f"{k:22s} {round(v, 3) if isinstance(v, float) else v}") for k, v in summ.items() if k not in ("config", "latency")]
     print("latency", summ["latency"]); print("saved ->", out)
 
-if __name__ == "__main__":
-    ap = argparse.ArgumentParser(); ap.add_argument("cmd", choices=["check", "ask", "eval", "sweep", "safety", "regress", "judge"]); ap.add_argument("question", nargs="?")
+def build_parser():
+    ap = argparse.ArgumentParser(); ap.add_argument("cmd", choices=["check", "ask", "eval", "sweep", "safety", "regress", "judge", "gen"]); ap.add_argument("question", nargs="?")
     ap.add_argument("--config", default="configs/ollama.yaml"); ap.add_argument("--role", default="employee", choices=list(ROLES))
     ap.add_argument("--limit", type=int); ap.add_argument("--sweep-config", default="configs/sweeps.yaml"); ap.add_argument("--sweep-out", default="results/sweeps")
     ap.add_argument("--offline", action="store_true", help="sweep with the hash embedder (no Ollama)"); ap.add_argument("--retrievers", help="comma list, e.g. bm25,hybrid"); ap.add_argument("--out", default=None); ap.add_argument("--md", default=None); ap.add_argument("--no-proof", action="store_true", help="safety: skip the detection-proof runs"); 
@@ -53,7 +54,14 @@ if __name__ == "__main__":
     ap.add_argument("--probe", action="store_true", help="judge: speed/VRAM/structured-output check of the candidate judge models"); ap.add_argument("--make-labels", action="store_true", help="judge: build the human-label CSV from real answers")
     ap.add_argument("--annotate", action="store_true", help="judge: label the CSV in the terminal (keys 1-5), resumable"); ap.add_argument("--validate", action="store_true", help="judge: agreement/kappa/variance against the human labels"); ap.add_argument("--metrics", help="judge: comma list, from faithfulness,answer_relevancy,correctness,injection_obedience,toxicity")
     ap.add_argument("--temperature", type=float, help="judge: override the judge temperature"); ap.add_argument("--no-cache", action="store_true", help="judge: ignore the judge call cache"); ap.add_argument("--force", action="store_true", help="judge --make-labels: overwrite a labeled CSV")
-    a = ap.parse_args()
+    ap.add_argument("--gen-config", default="configs/generation.yaml"); ap.add_argument("--model", help="gen: generator model"); ap.add_argument("--prompt", help="gen: prompt variant (rag/prompts.py)")
+    ap.add_argument("--k", type=int, help="gen: number of retrieved chunks"); ap.add_argument("--order", help="gen: context order rank|reverse|doc"); ap.add_argument("--grid", action="store_true", help="gen: one-factor-at-a-time study from configs/generation.yaml")
+    ap.add_argument("--skip-missing", action="store_true", help="gen --grid: skip variants whose Ollama model is not pulled"); ap.add_argument("--ids", help="gen: only these question ids (comma list); prints each answer and its attribution")
+    ap.add_argument("--show", action="store_true", help="gen: print the known-failure questions with answers and attribution"); ap.add_argument("--merge", nargs="+", metavar="RUN.json", help="gen: compare saved gen runs (first = reference, or --label)")
+    return ap
+
+if __name__ == "__main__":
+    a = build_parser().parse_args()
     cfg = load_cfg(a.config)
     if a.cmd == "regress":
         from eval.regression import apply_overrides
@@ -61,6 +69,9 @@ if __name__ == "__main__":
         if a.offline: cfg = deep_merge(cfg, dict(embedder=dict(type="hash"), llm=dict(type="mock", naive=False)))
         cfg = apply_overrides(cfg, a.sets)
     try:
+        if a.cmd == "gen":
+            from eval.run_generation import run_cli as gen_cli
+            sys.exit(gen_cli(cfg, a))
         if a.cmd == "check": sys.exit(cmd_check(cfg))
         if a.cmd == "judge":
             if not (a.probe or a.make_labels or a.annotate):                         # scoring and validation need DeepEval; probing and label-making do not

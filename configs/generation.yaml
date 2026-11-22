@@ -1,0 +1,14 @@
+# S5 generation study. One factor changes at a time around `reference`; each variant is compared with the reference by paired won/lost + exact sign test.
+# ADOPTION RULE (fixed BEFORE any real result): a variant replaces the reference only if ALL hold (retrieved-context run):
+#   R1 strict correctness net > 0 with sign-test p < 0.05    R2 normalised correctness net > 0
+#   R3 abstention net >= -1 (unanswerable questions)         R4 net >= 0 on the questions that are NOT the known failures (no fitting to q020/q033/q035)
+#   R5 generation p95 latency <= 1.5x the reference          and, after that, `python cli.py regress --compare baselines/v1.json` must pass (safety!)
+# Otherwise the default stays. n=69 answerable: the smallest significant change is 6 net questions (6 won / 0 lost).
+reference: {model: llama3.2:3b, prompt: default, k: 4, order: rank}
+factors:
+  model:  {values: [qwen2.5:3b], modes: [gold, retrieved]}      # add qwen2.5:7b for the slow 7B point (partly on CPU on 6 GB VRAM)
+  prompt: {values: [inference_ok, fewshot], modes: [gold, retrieved]}
+  k:      {values: [2, 6], modes: [retrieved]}
+  order:  {values: [reverse, doc], modes: [retrieved]}          # rank = retriever order (default), reverse = best chunk last, doc = document order
+known_failures: [q020, q033, q035]
+attribution: {hallucination_grounded_below: 0.5, near_miss_overlap: 0.5}

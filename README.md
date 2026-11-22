@@ -50,7 +50,7 @@ build_data.py    synthetic corpus (30 docs), golden questions (82), safety cases
 eval/run_sweeps.py  chunking x retriever x embedder x reranker sweeps
 eval/run_safety.py  safety suite (ACL, injection, PII, jailbreak, abstention)
 eval/regression.py  regression gate (baseline, tolerances, flipped questions, exit code); rules in configs/tolerances.yaml
-cli.py           check | ask | eval | sweep | safety | regress
+cli.py           check | ask | eval | sweep | safety | regress | judge | gen
 configs/         baseline.yaml (offline stand-ins), ollama.yaml (real run)
 rag/             chunking, embeddings (Ollama + disk cache), retrieval (BM25, dense, hybrid RRF, ACL pre-filter, rerankers), llm, pipeline, metrics, telemetry
 tests/           stand-in Ollama server + tests
@@ -62,3 +62,18 @@ docs/sections/   one brief per work section (S1..S8); docs/results/ holds final 
 ## LLM judge (S4)
 `pip install deepeval` (evaluation only), `ollama pull qwen2.5:7b`, then: `python cli.py judge --probe` (speed / VRAM / structured-output check), `python cli.py judge --make-labels` (30 real answers to label, guide in `data/labels/LABELING_GUIDE.md`),
 `python cli.py judge --validate` (agreement, Cohen's kappa, 3-run variance), `python cli.py judge` (judge scores for the golden set). Settings: `configs/judge.yaml`. Details and results: `docs/results/S4_judge.md`.
+
+## Generation study (S5)
+`python cli.py gen` runs every golden question twice with the same generator: GOLD context (the evidence chunks) and RETRIEVED context; the gap is retrieval's cost. Each wrong answer is attributed to one cause
+(chunking / retrieval miss / ranking / abstention error / generation error / metric artifact; rules in `eval/run_generation.py::classify`). Next to the strict keyword check it reports normalised correctness
+(number words, units, currency, times, comparison synonyms) and citation-stripped groundedness. Report: `results/gen_<label>.md`; write-up: `docs/results/S5_generation.md`.
+```
+python cli.py gen                                   # reference config: llama3.2:3b, default prompt, k=4
+python cli.py gen --ids q020,q033,q035              # print answers + attribution for the known failures
+python cli.py gen --model qwen2.5:3b                # another model (ollama pull qwen2.5:3b first)
+python cli.py gen --prompt fewshot --k 6 --order doc   # prompt variants: default | inference_ok | fewshot; order: rank | reverse | doc
+python cli.py gen --grid [--skip-missing]           # one factor at a time (configs/generation.yaml) + paired comparison and adoption rules
+python cli.py gen --merge results/gen_a.json results/gen_b.json   # compare saved runs (first = reference)
+python cli.py gen --offline                         # hash embedder + MockLLM: plumbing only, never model quality
+```
+
