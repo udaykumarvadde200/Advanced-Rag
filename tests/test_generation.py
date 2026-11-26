@@ -230,6 +230,40 @@ class TestCLI(unittest.TestCase):
             for v in d["values"]: P.get_system(v) if fac == "prompt" else (G.order_contexts([], v) if fac == "order" else None)
         known = {g["id"] for g in load_golden()}; self.assertTrue(set(y["known_failures"]) <= known)
 
+class Recorder:
+    """Wraps an LLM and records every request (question, context ids, system prompt) in order."""
+    def __init__(self, inner): self.inner, self.name, self.calls = inner, inner.name, []
+    def generate(self, question, contexts, system=L.SYSTEM):
+        self.calls.append((question, tuple(c.id for c in contexts), system)); return self.inner.generate(question, contexts, system=system)
+
+class TestSameRequestsAsEval(unittest.TestCase):
+    """At temperature 0 an identical request sequence gives identical answers, so `gen --modes retrieved` must send exactly what `cli.py eval` sends (S5 found 61/69 vs the baseline's 59/69)."""
+    def test_retrieved_only_run_is_call_for_call_identical_to_eval(self):
+        from eval.run_golden import evaluate
+        cfg = offline_cfg(); a = RAG(cfg); a.llm = Recorder(a.llm); evaluate(cfg, limit=25, rag=a)
+        b = RAG(cfg); b.llm = Recorder(b.llm); G.run_config(cfg, SPEC, load_golden()[:25], ("retrieved",), rag=b)
+        self.assertEqual(a.llm.calls[:26], b.llm.calls[:26])
+        c = RAG(cfg); c.llm = Recorder(c.llm); G.run_config(cfg, SPEC, load_golden()[:25], ("gold", "retrieved"), rag=c)          # with both modes the retrieved run still comes first
+        self.assertEqual(a.llm.calls[:26], c.llm.calls[:26])
+    def test_modes_flag(self):
+        self.assertEqual(cli.build_parser().parse_args(["gen", "--modes", "retrieved"]).modes, "retrieved")
+        with tempfile.TemporaryDirectory() as d:
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf): code = G.run_cli(offline_cfg(), cli.build_parser().parse_args(["gen", "--offline", "--limit", "10", "--modes", "retrieved", "--out", os.path.join(d, "r.json")]))
+            self.assertEqual(code, 0)
+            with open(os.path.join(d, "r.json"), encoding="utf-8") as f: run = json.load(f)["runs"][0]
+            self.assertEqual(list(run["modes"]), ["retrieved"]); self.assertNotIn("gap", run); self.assertIn("attribution", run)
+
+class TestDiffPaths(unittest.TestCase):
+    def test_reads_snapshot_and_gen_files_and_lists_differences(self):
+        from eval import diff_paths as D
+        with tempfile.TemporaryDirectory() as d:
+            snap = os.path.join(d, "s.json"); gen = os.path.join(d, "g.json")
+            with open(snap, "w", encoding="utf-8") as f: json.dump(dict(snapshot=dict(questions=dict(q1=dict(answer="a", correct=1.0), q2=dict(answer="b", correct=0.0), q3=dict(answer="same", correct=1.0)))), f)
+            rows = [dict(id="q1", answer="a", correct=1.0), dict(id="q2", answer="b changed", correct=1.0), dict(id="q3", answer="same", correct=1.0)]
+            with open(gen, "w", encoding="utf-8") as f: json.dump(dict(runs=[dict(label="x_default", modes=dict(retrieved=dict(rows=rows)))]), f)
+            (A, _), (B, _) = D.load_rows(snap), D.load_rows(gen); self.assertEqual([i for i, _, _ in D.diff(A, B)], ["q2"])
+
 class TestRealOllamaPath(unittest.TestCase):
     """The non-offline route (OllamaLLM + model check + per-prompt system message) against the stand-in server: plumbing only, the answers are not model results."""
     @classmethod

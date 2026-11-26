@@ -93,7 +93,7 @@ def gen_once(llm, system, q, ctx):
 
 def run_mode(rag, G, mode, system, order, log=lambda m: None, near_thr=0.5):
     k = rag.cfg["retriever"].get("k", 4); rows = []
-    gen_once(rag.llm, system, "warm up", [])                                  # load the model before timing
+    gen_once(rag.llm, system, "warm up", retrieved(rag, dict(question="warm up", role="guest")) if mode == "retrieved" else [])   # same throwaway request as cli.py eval (guest, retrieved context)
     for i, g in enumerate(G, 1):
         if mode == "gold": got, intact = gold_context(rag.chunks, g)
         else: got, intact = retrieved(rag, g), None
@@ -191,7 +191,7 @@ def variant_cfg(cfg, spec, offline=False, ref_model=None):
 
 def run_config(cfg, spec, G, modes, log=lambda m: None, att_cfg=None, rag=None):
     att_cfg = att_cfg or {}; rag = rag or RAG(cfg); system = get_system(spec["prompt"]); res = {}
-    for mode in ("gold", "retrieved"):
+    for mode in ("retrieved", "gold"):                                       # retrieved FIRST: every variant's retrieved run then has the same request history as cli.py eval
         if mode in modes:
             log(f"{spec_label(spec)}: {mode} context ({len(G)} questions)")
             rows = run_mode(rag, G, mode, system, spec["order"], log, att_cfg.get("near_miss_overlap", 0.5)); res[mode] = dict(rows=rows, summary=summarize(rows))
@@ -361,7 +361,9 @@ def run_cli(cfg, a):
         for key in ("model", "prompt", "k", "order"):
             if getattr(a, key, None) is not None: ref[key] = getattr(a, key)
     for s_ in [ref]: get_system(s_["prompt"]); order_contexts([], s_["order"])           # fail early on a typo
+    only = {"both": ("gold", "retrieved"), "gold": ("gold",), "retrieved": ("retrieved",)}[a.modes or "both"]
     plan = sweep_specs(ref, gcfg.get("factors")) if a.grid else [(ref, ("gold", "retrieved"), "single")]
+    plan = [(sp, tuple(m for m in md if m in only), fac) for sp, md, fac in plan]; plan = [x for x in plan if x[1]]
     if a.grid: plan.sort(key=lambda p: p[0]["model"] != ref["model"])                    # keep the reference model's runs together
     runs = []
     for spec, modes, fac in plan:

@@ -5,7 +5,7 @@
   python cli.py sweep [--offline] [--retrievers bm25,dense,hybrid]          retrieval sweeps -> results/sweeps.md
   python cli.py regress --save-baseline baselines/v1.json | --compare baselines/v1.json | --noise-study 3   [--offline] [--no-safety] [--set a.b=c ...]   regression gate (exit 1 = a gate failed, 2 = invalid comparison)
   python cli.py safety [--offline] [--no-proof] [--out results/safety.json] [--md results/safety.md]   safety suite (exit 1 = ACL violation, 2 = detection proof failed)
-  python cli.py gen [--model M] [--prompt default|inference_ok|fewshot] [--k N] [--order rank|reverse|doc] [--ids q020,q033] [--offline] | --grid [--skip-missing] | --merge a.json b.json   generation study (S5): gold vs retrieved context, failure attribution
+  python cli.py gen [--model M] [--prompt default|inference_ok|fewshot] [--k N] [--order rank|reverse|doc] [--ids q020,q033] [--modes retrieved] [--offline] | --grid [--skip-missing] | --merge a.json b.json   generation study (S5): gold vs retrieved context, failure attribution
   python cli.py judge --probe | --make-labels | --annotate | --validate [--runs 3] | [--metrics faithfulness,answer_relevancy,correctness] [--limit N]   LLM judge (S4; needs `pip install deepeval`)
 """
 import argparse, json, os, sys, time
@@ -55,7 +55,7 @@ def build_parser():
     ap.add_argument("--annotate", action="store_true", help="judge: label the CSV in the terminal (keys 1-5), resumable"); ap.add_argument("--validate", action="store_true", help="judge: agreement/kappa/variance against the human labels"); ap.add_argument("--metrics", help="judge: comma list, from faithfulness,answer_relevancy,correctness,injection_obedience,toxicity")
     ap.add_argument("--temperature", type=float, help="judge: override the judge temperature"); ap.add_argument("--no-cache", action="store_true", help="judge: ignore the judge call cache"); ap.add_argument("--force", action="store_true", help="judge --make-labels: overwrite a labeled CSV")
     ap.add_argument("--gen-config", default="configs/generation.yaml"); ap.add_argument("--model", help="gen: generator model"); ap.add_argument("--prompt", help="gen: prompt variant (rag/prompts.py)")
-    ap.add_argument("--k", type=int, help="gen: number of retrieved chunks"); ap.add_argument("--order", help="gen: context order rank|reverse|doc"); ap.add_argument("--grid", action="store_true", help="gen: one-factor-at-a-time study from configs/generation.yaml")
+    ap.add_argument("--k", type=int, help="gen: number of retrieved chunks"); ap.add_argument("--order", help="gen: context order rank|reverse|doc"); ap.add_argument("--modes", choices=["both", "gold", "retrieved"], help="gen: which context runs to do (default both); `retrieved` sends exactly the requests cli.py eval sends"); ap.add_argument("--grid", action="store_true", help="gen: one-factor-at-a-time study from configs/generation.yaml")
     ap.add_argument("--skip-missing", action="store_true", help="gen --grid: skip variants whose Ollama model is not pulled"); ap.add_argument("--ids", help="gen: only these question ids (comma list); prints each answer and its attribution")
     ap.add_argument("--show", action="store_true", help="gen: print the known-failure questions with answers and attribution"); ap.add_argument("--merge", nargs="+", metavar="RUN.json", help="gen: compare saved gen runs (first = reference, or --label)")
     return ap
