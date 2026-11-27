@@ -1,0 +1,19 @@
+# S6 metadata routing rules (rules first; no LLM classifier). Switches live in the main config under `routing:`  {enabled, variants, department}.
+# variants: a document whose TITLE matches `doc_title` is a variant (archived / regional / audience-specific). It is EXCLUDED from retrieval unless the question matches `unless_query`.
+# department: if the question matches keywords of exactly ONE department, only that department's documents are searched (several departments, or none -> no filter).
+# Both are pre-filters applied AFTER the ACL filter: they can only narrow what a role may see, never widen it. If a filter leaves fewer than k chunks it is ignored for that query.
+variants:
+  - {name: archived,   doc_title: "archived|superseded|deprecated", unless_query: "archived|archive|2023|old policy|previous policy|superseded|former policy|earlier version|no longer|used to"}
+  - {name: berlin,     doc_title: "berlin",                          unless_query: "berlin|german|germany|euro|\\bcet\\b"}
+  - {name: contractor, doc_title: "contractor",                      unless_query: "contractor|contract worker|freelanc|consultant"}
+departments:
+  hr:  {prefixes: [hr],  keywords: "leave|vacation|sick|parental|remote|work from home|home office|salary|compensation|performance review|referral|training|learning|bonus|stipend|internet"}
+  fin: {prefixes: [fin], extra_docs: [poison-02], keywords: "expense|reimburs|travel|cab fare|flight|hotel|vendor|invoice|payment term|budget|corporate card|quarterly|revenue|meal|receipt|allowance"}
+  eng: {prefixes: [eng], keywords: "incident|sev1|sev2|postmortem|runbook|deploy|api|rate limit|on-call|code review|retention|pull request"}
+  it:  {prefixes: [it],  keywords: "onboarding|laptop|vpn|helpdesk|it support"}
+  sec: {prefixes: [sec], keywords: "security|classification|phishing|confidential|incident report"}
+# pairs of documents a retriever can confuse; used ONLY to measure the wrong-document rate (eval/run_routing.py), not by the router
+confusable:
+  - [hr-01, hr-07]    # current vs archived 2023 leave policy
+  - [hr-02, hr-06]    # main vs Berlin remote-work policy
+  - [hr-01, hr-05]    # employee vs contractor leave

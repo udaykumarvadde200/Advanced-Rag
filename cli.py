@@ -6,6 +6,7 @@
   python cli.py regress --save-baseline baselines/v1.json | --compare baselines/v1.json | --noise-study 3   [--offline] [--no-safety] [--set a.b=c ...]   regression gate (exit 1 = a gate failed, 2 = invalid comparison)
   python cli.py safety [--offline] [--no-proof] [--out results/safety.json] [--md results/safety.md]   safety suite (exit 1 = ACL violation, 2 = detection proof failed)
   python cli.py gen [--model M] [--prompt default|inference_ok|fewshot] [--k N] [--order rank|reverse|doc] [--ids q020,q033] [--modes retrieved] [--offline] | --grid [--skip-missing] | --merge a.json b.json   generation study (S5): gold vs retrieved context, failure attribution
+  python cli.py s6 --part sanitizer | routing [--offline] | calculator | ablate [--only a,b] [--force] [--offline]   S6 advanced features + ablations (needs Ollama except sanitizer/calculator/--offline)
   python cli.py judge --probe | --make-labels | --annotate | --validate [--runs 3] | [--metrics faithfulness,answer_relevancy,correctness] [--limit N]   LLM judge (S4; needs `pip install deepeval`)
 """
 import argparse, json, os, sys, time
@@ -43,7 +44,7 @@ def cmd_eval(cfg, limit, out):
     print("latency", summ["latency"]); print("saved ->", out)
 
 def build_parser():
-    ap = argparse.ArgumentParser(); ap.add_argument("cmd", choices=["check", "ask", "eval", "sweep", "safety", "regress", "judge", "gen"]); ap.add_argument("question", nargs="?")
+    ap = argparse.ArgumentParser(); ap.add_argument("cmd", choices=["check", "ask", "eval", "sweep", "safety", "regress", "judge", "gen", "s6"]); ap.add_argument("question", nargs="?")
     ap.add_argument("--config", default="configs/ollama.yaml"); ap.add_argument("--role", default="employee", choices=list(ROLES))
     ap.add_argument("--limit", type=int); ap.add_argument("--sweep-config", default="configs/sweeps.yaml"); ap.add_argument("--sweep-out", default="results/sweeps")
     ap.add_argument("--offline", action="store_true", help="sweep with the hash embedder (no Ollama)"); ap.add_argument("--retrievers", help="comma list, e.g. bm25,hybrid"); ap.add_argument("--out", default=None); ap.add_argument("--md", default=None); ap.add_argument("--no-proof", action="store_true", help="safety: skip the detection-proof runs"); 
@@ -58,6 +59,7 @@ def build_parser():
     ap.add_argument("--k", type=int, help="gen: number of retrieved chunks"); ap.add_argument("--order", help="gen: context order rank|reverse|doc"); ap.add_argument("--modes", choices=["both", "gold", "retrieved"], help="gen: which context runs to do (default both); `retrieved` sends exactly the requests cli.py eval sends"); ap.add_argument("--grid", action="store_true", help="gen: one-factor-at-a-time study from configs/generation.yaml")
     ap.add_argument("--skip-missing", action="store_true", help="gen --grid: skip variants whose Ollama model is not pulled"); ap.add_argument("--ids", help="gen: only these question ids (comma list); prints each answer and its attribution")
     ap.add_argument("--show", action="store_true", help="gen: print the known-failure questions with answers and attribution"); ap.add_argument("--merge", nargs="+", metavar="RUN.json", help="gen: compare saved gen runs (first = reference, or --label)")
+    ap.add_argument("--part", choices=["sanitizer", "routing", "calculator", "ablate"], help="s6: which part to run"); ap.add_argument("--only", help="s6 --part ablate: comma list of variant names")
     return ap
 
 if __name__ == "__main__":
@@ -72,6 +74,9 @@ if __name__ == "__main__":
         if a.cmd == "gen":
             from eval.run_generation import run_cli as gen_cli
             sys.exit(gen_cli(cfg, a))
+        if a.cmd == "s6":
+            from eval.run_s6 import run_cli as s6_cli
+            sys.exit(s6_cli(cfg, a))
         if a.cmd == "check": sys.exit(cmd_check(cfg))
         if a.cmd == "judge":
             if not (a.probe or a.make_labels or a.annotate):                         # scoring and validation need DeepEval; probing and label-making do not

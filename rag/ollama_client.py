@@ -39,6 +39,11 @@ def model_digests(host=None):
     except requests.ConnectionError as e: raise OllamaError(f"Cannot reach Ollama at {host}. Start it with: ollama serve") from e
     return {m["name"]: m.get("digest", "") for m in r.json().get("models", [])}
 
+def version(host=None):
+    """Ollama server version string (GET /api/version), or 'unknown'. Recorded in regression snapshots: a session-level behaviour change (S5 safety FAIL) cannot be ruled out without it."""
+    try: r = requests.get(f"{_norm(host or DEFAULT_HOST)}/api/version", timeout=10); r.raise_for_status(); return r.json().get("version", "unknown")
+    except Exception: return "unknown"
+
 def missing_models(needed, host=None):
     have = set(list_models(host)); out = []
     for m in needed:

@@ -76,7 +76,7 @@ def take_snapshot(cfg, offline=False, safety=True, label="", hardware=None, log=
         questions[r["id"]] = q
     snap = dict(version=VERSION,
                 meta=dict(created=datetime.now(timezone.utc).isoformat(timespec="seconds"), label=label, offline=offline, config=cfg, config_hash=config_hash(cfg), data_hash=data_hash(),
-                          models=models_used(cfg, offline), hardware=hardware_note(hardware), wall_s=0),
+                          models=models_used(cfg, offline), hardware=hardware_note(hardware), ollama_version="stand-in" if offline else oc.version(), wall_s=0),
                 metrics=dict(n_answerable=s["n_answerable"], n_unanswerable=s["n_unanswerable"], hit_at_k=s["hit_at_k"], mrr=s["mrr"], doc_recall=s["doc_recall"],
                              correctness=s["correctness"], groundedness=s["groundedness"], abstention_accuracy=s["abstention_accuracy"], p50_ms=lat["p50_ms"], p95_ms=lat["p95_ms"],
                              tokens_in_mean=lat["tokens_in_mean"], tokens_out_mean=lat["tokens_out_mean"], tokens_per_query=round(lat["tokens_in_mean"] + lat["tokens_out_mean"], 1),
@@ -137,6 +137,9 @@ def compare(base, new, tol):
         return dict(status="INVALID", exit_code=2, failed_gates=[], invalid=invalid, checks=[], flips={}, safety_flips={}, config_diff=config_diff(bmeta["config"], nmeta["config"]), warnings=[], notes=[])
     if bmeta["config_hash"] != nmeta["config_hash"]: warns.append("config differs from the baseline (see config diff)")
     if bmeta["models"] != nmeta["models"]: warns.append("model set/digests differ from the baseline: " + "; ".join(f"{m}: {bmeta['models'].get(m, '-')[:19]} -> {nmeta['models'].get(m, '-')[:19]}" for m in sorted(set(bmeta["models"]) | set(nmeta["models"])) if bmeta["models"].get(m) != nmeta["models"].get(m)))
+    bv, nv = bmeta.get("ollama_version"), nmeta.get("ollama_version")
+    if bv is None: warns.append("baseline has no Ollama version recorded (frozen before S6); a version change cannot be ruled out as a cause of differences")
+    elif bv != nv: warns.append(f"Ollama version differs from the baseline: {bv} -> {nv}")
     if bmeta["hardware"] != nmeta["hardware"]: warns.append("hardware note differs: latency is not comparable across machines")
     if not floors_on: warns.append("OFFLINE stand-ins: absolute floors/ceilings are not applied; numbers prove the comparator, not a model")
     bq, nq = base["questions"], new["questions"]; notes = []

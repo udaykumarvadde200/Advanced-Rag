@@ -43,13 +43,17 @@ class Retriever:
         self.chunks, self.mode, self.acl = chunks, mode, enforce_acl
         self.bm25 = BM25(chunks) if mode in ("bm25", "hybrid") else None
         self.dense = Dense(chunks, embedder) if mode in ("dense", "hybrid") else None
-    def retrieve(self, query, roles, k=5, pool=20, trace=None):
+    def retrieve(self, query, roles, k=5, pool=20, trace=None, route=None):
         from .telemetry import Trace
         t = trace or Trace(); qv = None
         if self.dense:
             with t.stage("embed_query"): qv = self.dense.query_vec(query)
         with t.stage("rank"):
             allowed = [i for i, c in enumerate(self.chunks) if (not self.acl) or c.access in roles]
+            if route is not None:   # S6 metadata routing: narrows the ACL-allowed set; if it would leave fewer than k chunks, fall back to the ACL-only set
+                narrowed = [i for i in allowed if route(self.chunks[i])]
+                if len(narrowed) >= max(k, 1): allowed = narrowed
+                else: self.route_fallbacks = getattr(self, "route_fallbacks", 0) + 1
             lists = []
             if self.bm25: lists.append(_rank(self.bm25.scores(query), allowed, pool))
             if self.dense: lists.append(_rank(self.dense.scores_from(qv), allowed, pool))
