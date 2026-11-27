@@ -148,4 +148,4 @@ query embeddings uncached when measuring latency; synthetic data for now (Financ
 
 ## Git
 Repo is initialised (branch `main`). Convention: one commit per finished task, a tag per finished section (`s0-foundation`, `s1`, ...). `results/` is git-ignored (regenerate); frozen regression baselines go in `baselines/`; final tables go in `docs/results/`.
-Commits so far: 3e1eeb4 S0 foundation (tag s0-foundation), fadbacf docs (tag docs-handoff), 0eb56c8 S1 (tag s1), 5acc250 S2 (tag s2), ec2deaf S3 (tag s3), bad3f20 S4 (tag s4), s5 = 596a09e, 3624dfe S6 code (tag s6-code), next: S6 results commit (tag s6). Remote `origin` = github.com/udaykumarvadde200/Advanced-Rag. Never `git pull`/`--force`.
+Commits so far: 3e1eeb4 S0 foundation (tag s0-foundation), fadbacf docs (tag docs-handoff), 0eb56c8 S1 (tag s1), 5acc250 S2 (tag s2), ec2deaf S3 (tag s3), bad3f20 S4 (tag s4), s5 = 596a09e, 3624dfe S6 code (tag s6-code), 607fd5e S6 results (tag s6); S6 adoption decisions pending. Remote `origin` = github.com/udaykumarvadde200/Advanced-Rag. Never `git pull`/`--force`.
