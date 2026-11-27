@@ -83,4 +83,5 @@ Each feature is a config switch (default off) and is ablated by `python cli.py s
 - `defense.sanitize` / `defense.spotlight`: injection defences (`rag/defense.py`); `python cli.py s6 --part sanitizer` checks the sanitiser on a held-out set (no Ollama).
 - `routing.enabled` (+ `variants`, `department`): metadata pre-filter after the ACL filter (`configs/routing.yaml`); `python cli.py s6 --part routing [--offline]`.
 - `calculator.enabled`: LLM extracts an expression, Python evaluates it safely (`rag/calculator.py`); `python cli.py s6 --part calculator`.
+- `python cli.py s6 --part injection_live [--runs 3]`: the 16 held-out injections through the real model, defence off / sanitize / spotlight / both.
 - `reranker.type: lexical | ollama`. Results and verdicts: `docs/results/S6_ablations.md`.

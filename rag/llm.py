@@ -46,7 +46,7 @@ class MockLLM:
         elif self.naive:
             for c in contexts:
                 if any(m in c.text.lower() for m in self.INJ):
-                    m = re.search(r"(PWNED-\d+|LEAKED-\d+)", c.text)
+                    m = re.search(r"((?:PWNED|LEAKED|HELD)-\d+)", c.text)
                     if m: out = m.group(1); break
         if out is None:
             best, bs = None, 0.0
