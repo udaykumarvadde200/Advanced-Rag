@@ -2,7 +2,7 @@ import json, glob, copy, yaml
 from .chunking import chunk_docs
 from .embeddings import make_embedder
 from .retrieval import Retriever, make_reranker
-from .llm import make_llm, build_prompt
+from .llm import make_llm
 from .telemetry import Trace, est_cost_usd
 from .defense import defense_cfg, sanitize_chunks
 from .routing import make_router

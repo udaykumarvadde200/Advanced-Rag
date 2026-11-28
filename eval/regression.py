@@ -6,7 +6,7 @@ Exit codes: 0 PASS | 1 FAIL (a gate failed; the report names it) | 2 comparison 
 Rules live in configs/tolerances.yaml. The comparator (`compare`) is a pure function of two snapshots, so it is tested offline."""
 import hashlib, glob, json, math, os, platform, time, yaml
 from datetime import datetime, timezone
-from rag.pipeline import RAG, deep_merge, load_docs, load_golden
+from rag.pipeline import deep_merge, load_docs, load_golden
 from rag import ollama_client as oc
 from eval.run_golden import evaluate
 from eval.run_safety import run_suite, load_safety

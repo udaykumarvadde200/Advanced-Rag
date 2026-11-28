@@ -1,4 +1,4 @@
-import re, time
+import re
 from .telemetry import est_tokens
 
 SYSTEM = ("You are a company knowledge assistant. Answer ONLY from the provided context. "

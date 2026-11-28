@@ -1,0 +1,20 @@
+name: offline-tests
+# Runs ONLY the offline unit tests (stand-in Ollama server, hash embedder, MockLLM).
+# They prove plumbing and the evaluation code, not model quality. No Ollama, no network models.
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  unittest:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: pip install numpy pyyaml requests
+      - run: python -m unittest

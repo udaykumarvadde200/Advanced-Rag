@@ -6,10 +6,10 @@
   python cli.py s6 --part ablate [--only a,b] [--force] [--offline]   one full regression snapshot per variant of configs/ablations.yaml -> results/ablations/, report docs-ready markdown
 Stand-in (offline) numbers prove plumbing, never model behaviour; each part says what its offline run is valid for."""
 import json, os, yaml
-from rag.pipeline import RAG, load_docs, load_golden, load_cfg, deep_merge, ROLES, _read
+from rag.pipeline import RAG, load_docs, load_golden, deep_merge, _read
 from rag.chunking import Chunk, chunk_docs
 from rag.metrics import retrieval_metrics, mean, _evs
-from rag.defense import evaluate_sanitizer, false_positives, sanitize_chunk, clean_text
+from rag.defense import evaluate_sanitizer, false_positives, sanitize_chunk
 from rag.calculator import looks_arithmetic, safe_eval, CalcError
 from eval.regression import take_snapshot, compare, load_tolerances, paired, sign_test_p, apply_overrides, save_json, save_text, load_snapshot
 

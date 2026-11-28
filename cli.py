@@ -10,10 +10,8 @@
   python cli.py judge --probe | --make-labels | --annotate | --validate [--runs 3] | [--metrics faithfulness,answer_relevancy,correctness] [--limit N]   LLM judge (S4; needs `pip install deepeval`)
 """
 import argparse, json, os, sys, time
-from rag.pipeline import RAG, load_cfg, load_golden, ROLES
-from rag.metrics import retrieval_metrics, correctness, groundedness, mean
-from rag.llm import is_abstain
-from rag.telemetry import summarize_latency
+from rag.pipeline import RAG, load_cfg, ROLES
+from rag.metrics import correctness
 from rag import ollama_client as oc
 
 def needed_models(cfg):

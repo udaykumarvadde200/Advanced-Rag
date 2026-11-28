@@ -1,5 +1,9 @@
-numpy
-pyyaml
-requests
-# evaluation only (S4 LLM judge; the RAG pipeline does not import it):
-deepeval
+# Core (the RAG pipeline, tests and all offline runs need only these three).
+# Ranges were tested with numpy 2.5 / PyYAML 6.0 / requests 2.34 on Python 3.12.
+# For a byte-exact copy of YOUR environment run: pip freeze > requirements-lock.txt
+numpy>=1.26,<3
+pyyaml>=6.0,<7
+requests>=2.31,<3
+# Evaluation only (S4 LLM judge; the RAG pipeline does not import it).
+# 4.3.4 is the version recorded in the real S4 validation run (docs/results/S4_judge.md).
+deepeval==4.3.4
