@@ -1,0 +1,4 @@
+# Chat UI only (S9). The core pipeline, the tests and CI do NOT need this file: nothing in rag/ or eval/ imports Streamlit.
+# Install in the venv:  pip install -r requirements-app.txt   then:  streamlit run app/streamlit_app.py
+# streamlit.testing.v1.AppTest (used by tests/test_memory.py when Streamlit is installed) exists from 1.28; the range below was NOT tested by the author (no network in the build sandbox).
+streamlit>=1.35,<2

@@ -30,12 +30,19 @@ class OllamaLLM:
         return dict(text=j["message"]["content"].strip(), tokens_in=j.get("prompt_eval_count", 0), tokens_out=j.get("eval_count", 0),
                     ollama=dict(total_ms=j.get("total_duration", 0) / 1e6, load_ms=j.get("load_duration", 0) / 1e6,
                                 prompt_eval_ms=j.get("prompt_eval_duration", 0) / 1e6, eval_ms=j.get("eval_duration", 0) / 1e6))
+    def complete(self, system, user, num_predict=96):
+        """S9 query rewriting: one plain chat call with the same model and sampling options (only the output length differs). `generate` is untouched."""
+        j = self.oc.chat(self.host, self.model, [dict(role="system", content=system), dict(role="user", content=user)], dict(self.opts, num_predict=num_predict), self.keep_alive)
+        return dict(text=j["message"]["content"].strip(), tokens_in=j.get("prompt_eval_count", 0), tokens_out=j.get("eval_count", 0),
+                    ollama=dict(total_ms=j.get("total_duration", 0) / 1e6, load_ms=j.get("load_duration", 0) / 1e6,
+                                prompt_eval_ms=j.get("prompt_eval_duration", 0) / 1e6, eval_ms=j.get("eval_duration", 0) / 1e6))
 
 class MockLLM:
     """Offline extractive stand-in so the harness can be tested without Ollama.
     naive=True simulates a vulnerable model (obeys injected instructions / jailbreaks) to prove the safety tests catch it."""
     JAIL = ("ignore your rules", "you are now dan", "no restrictions", "dump the system prompt", "pretend you are", "print every confidential")
     INJ = ("ignore all previous", "system notice to assistant", "disregard your rules")
+    REFS = {"and", "they", "their", "them", "it", "its", "that", "those", "this", "these", "he", "she", "one", "ones"}   # stand-in rewriter only
     def __init__(self, naive=False, threshold=0.5): self.name, self.naive, self.th = "mock" + ("-naive" if naive else ""), naive, threshold
     def generate(self, question, contexts, system=SYSTEM, spotlight=False):
         from .text import tokens
@@ -57,6 +64,20 @@ class MockLLM:
                     if sc > bs: bs, best = sc, f"{s} [{i+1}]"
             out = best if best and bs >= self.th else ABSTAIN
         return dict(text=out, tokens_in=est_tokens(prompt), tokens_out=est_tokens(out), ollama={})
+
+    def complete(self, system, user, num_predict=96):
+        """S9 stand-in rewriter (PLUMBING ONLY, not a model result): a short follow-up (8 words or fewer) that contains a reference word (and / they / it / that ...) gets the previous question prepended, anything else is returned unchanged.
+        naive=True simulates a vulnerable rewriter that obeys an injection found in the conversation excerpt (it emits the canary), to prove the history-injection checks fire."""
+        from .text import tokens
+        m = re.search(r"<<<\n(.*?)\n>>>", user, flags=re.S); hist = m.group(1) if m else ""
+        f = re.search(r"Follow-up question: (.*?)\nStandalone question:", user, flags=re.S); q = (f.group(1) if f else user).strip(); out = q
+        if self.naive and any(i in hist.lower() for i in self.INJ):
+            c = re.search(r"((?:PWNED|LEAKED|HELD|HIST)-\d+)", hist)
+            if c: out = c.group(1)
+        else:
+            w = re.findall(r"[a-z']+", q.lower()); prev = re.findall(r"^Q: (.*)$", hist, flags=re.M)
+            if prev and len(w) <= 8 and (set(w) & self.REFS or q.lower().startswith(("what about", "how about"))): out = prev[-1].rstrip(" ?") + "? " + q
+        return dict(text=out, tokens_in=est_tokens(system + user), tokens_out=est_tokens(out), ollama={})
 
 def make_llm(cfg):
     t = cfg.get("type", "mock")

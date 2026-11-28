@@ -23,6 +23,7 @@ class H(BaseHTTPRequestHandler):
         elif self.path == "/api/chat":
             STATS["chat"] += 1; u = body["messages"][-1]["content"]
             if u.startswith("Rate how well"): txt = "7"
+            elif u.startswith("REWRITE TASK"): txt = MockLLM().complete(body["messages"][0]["content"], u)["text"]      # S9 query rewriting (stand-in rules, not a model)
             else:
                 q = re.search(r"Question: (.*)\nAnswer concisely", u).group(1)
                 ctx = [C(m[1], m[0]) for m in re.findall(r"\[\d+\] \((.+?)\) (.*?)(?=\n\n\[|\n\nQuestion:)", u, flags=re.S)]

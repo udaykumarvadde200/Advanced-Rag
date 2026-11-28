@@ -58,7 +58,7 @@ Real runs are deterministic within one Ollama session but can differ by about +-
 | Judge + validation vs human labels | `python cli.py judge --probe / --make-labels / --annotate / --validate` | `S4_judge.md` |
 | Gold-vs-retrieved, failure attribution, variants | `python cli.py gen [--grid] [--ids q020,q033]` | `S5_generation.md` |
 | Ablations (sanitiser, routing, rerank, calculator) | `python cli.py s6 --part ablate / routing / sanitizer / injection_live` | `S6_ablations.md` |
-| Unit tests (no Ollama; 208) | `python -m unittest` | stand-in server proves plumbing only |
+| Unit tests (no Ollama; 247, 1 skipped without Streamlit) | `python -m unittest` | stand-in server proves plumbing only |
 
 Switch models by editing `configs/ollama.yaml`. A 7-8B model may be partly offloaded to CPU on 6 GB VRAM: slower but workable.
 
@@ -135,25 +135,34 @@ Rules (`configs/tolerances.yaml`): retrieval -0.02, generation -0.05, ACL violat
 - **Local 3B model, one machine.** Latency is only comparable on the same hardware (RTX 4050 6 GB, 16 GB RAM); p95 over 82 questions is a noisy statistic.
 - **Judge.** Moderate agreement at best, one labeler who also knows the pipeline, labels partly made with Claude's guidance, two labels changed after seeing judge output.
 - **Stand-in runs prove plumbing, not quality.** The unit tests and `--offline` runs use a stand-in server, a hash embedder and `MockLLM`; their output is never a model result.
-- **Not done:** a chat UI and conversation memory (today `cli.py ask` answers one question at a time, see Roadmap), optional LangSmith/Langfuse tracing (local JSON logs only), a 7B generator, per-type failure attribution, judge-based faithfulness, an output-side injection filter.
+- **Not done:** optional LangSmith/Langfuse tracing (local JSON logs only), a 7B generator, per-type failure attribution, judge-based faithfulness, an output-side injection filter.
 
-## Roadmap (planned, NOT built yet; v1.0 does not include any of this)
-Today the "chatbot" is one command per question: `python cli.py ask "..." --role employee`. There is no chat window and no conversation memory, so a follow-up such as "and for contractors?" is not understood. The next two sections add them without changing the evaluated defaults:
-1. **S9 - Streamlit chat UI + short-term memory** (`docs/sections/S9_streamlit_chat_memory.md`). A local browser chat with a role picker, citations and latency, plus last-N-turns memory that rewrites follow-ups into standalone questions. Memory is a config switch, **off by default**; with it off the requests are identical to v1.0 (so `baselines/v1.json` stays valid). Memory is evaluated like every other feature: a multi-turn golden set, with vs without memory, plus safety rules (the ACL applies to every rewritten turn, a role change clears the history, history is untrusted text).
+## Chat UI and short-term memory (S9: code built and offline-tested, real measurement pending)
+```powershell
+pip install -r requirements-app.txt        # Streamlit only; the core, the tests and CI do not need it
+streamlit run app/streamlit_app.py         # needs `ollama serve` and the pulled models (RAG_APP_OFFLINE=1 = stand-ins, to test the page only)
+```
+The page has a role picker (a demo picker: **real authentication is out of scope**), answers with a Sources expander, per-answer latency and tokens, a plain "I don't know", a clear-chat button and a memory toggle. **Memory is off by default.** When on, the last N turns of the same role's chat are used only to rewrite a follow-up ("and for contractors?") into a standalone question, which then goes through the normal pipeline; the rewrite is shown under the answer. With memory off the requests sent to Ollama are identical to v1.0 (tested), so `baselines/v1.json` stays valid.
+What it does not do: no long-term or vector memory, the history never enters the answer prompt, nothing carries over a role change (the chat is cleared), and a wrong rewrite is possible (that is what the evaluation measures). History is treated as untrusted text (blocklist sanitiser from S6, delimited, rewrite validated), which an evasive injection can still bypass.
+Evaluation: `python cli.py s9 --part multiturn` runs 30 conversations (61 turns, 18 follow-ups that need the history, 10 that do not) with memory off vs on; verdict rules were fixed before any run (`configs/memory_eval.yaml`). **No real-model number exists yet**; see `docs/results/S9_chat_memory.md`.
+
+## Roadmap (S10 is planned, NOT built yet)
+1. **S9** is described above.
 2. **S10 - Optional LangSmith tracing** (`docs/sections/S10_langsmith_tracing.md`). Off by default, API key only from an environment variable, synthetic data only (traces are uploaded to LangSmith's cloud; the free tier has a trace limit, so check pricing before enabling). A free local alternative is Langfuse self-hosted.
 
 ## Layout
 ```
 build_data.py, build_data_extra.py   synthetic corpus (30 docs), golden questions (82), safety cases
-rag/        chunking, embeddings (Ollama + disk cache), retrieval (BM25, dense, hybrid RRF, ACL pre-filter, rerankers), routing, defense, calculator, llm, prompts, pipeline, metrics, telemetry
-eval/       run_golden, run_sweeps, run_safety, regression, judge(+validation), run_generation, run_s6
-configs/    ollama.yaml (default), baseline.yaml (offline stand-ins), tolerances.yaml, sweeps.yaml, generation.yaml, ablations.yaml, routing.yaml, judge.yaml
-baselines/  v1.json (frozen real baseline)       data/  corpus, golden, safety, heldout, labels
-tests/      208 offline tests + stand-in Ollama server (tests/fake_ollama.py)
-docs/       sections/ (briefs), results/ (S1-S6 write-ups), ARCHITECTURE.md (diagrams), DEMO.md (2-minute demo script)
+rag/        chunking, embeddings (Ollama + disk cache), retrieval (BM25, dense, hybrid RRF, ACL pre-filter, rerankers), routing, defense, calculator, llm, prompts, pipeline, memory, metrics, telemetry
+app/        streamlit_app.py (chat UI), ui_helpers.py (Streamlit-free helpers); requirements-app.txt
+eval/       run_golden, run_sweeps, run_safety, regression, judge(+validation), run_generation, run_s6, run_multiturn
+configs/    ollama.yaml (default), baseline.yaml (offline stand-ins), tolerances.yaml, sweeps.yaml, generation.yaml, ablations.yaml, routing.yaml, judge.yaml, memory_eval.yaml
+baselines/  v1.json (frozen real baseline)       data/  corpus, golden (incl. multiturn.jsonl), safety, heldout, labels
+tests/      247 offline tests (1 skipped without Streamlit) + stand-in Ollama server (tests/fake_ollama.py)
+docs/       sections/ (briefs), results/ (S1-S6, S9 write-ups), ARCHITECTURE.md (diagrams), DEMO.md (2-minute demo script)
 PROJECT_GOAL.md, HANDOFF.md   what we built, status, decisions
 ```
-Commands: `python cli.py check | ask | eval | sweep | safety | regress | judge | gen | s6`, `--config configs/baseline.yaml` or `--offline` for stand-ins. Windows: `core.autocrlf=true`, so LF/CRLF warnings on `git add` are harmless.
+Commands: `python cli.py check | ask | eval | sweep | safety | regress | judge | gen | s6 | s9`, `--config configs/baseline.yaml` or `--offline` for stand-ins. Windows: `core.autocrlf=true`, so LF/CRLF warnings on `git add` are harmless.
 
 ## License
 MIT (see `LICENSE`).
