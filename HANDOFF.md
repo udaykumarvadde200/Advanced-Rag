@@ -26,6 +26,8 @@ To keep context small: one section per conversation, upload the zip (do not past
 | S5 | Generation evaluation + failure attribution | DONE (2026-11-22, tag s5): default kept (no variant passes R1). `gen` = `eval` request-for-request (tested); the 61 vs 59 gap is Ollama session variation (+-2 questions). Same request sequence scored 59 / 60 / 61 across runs (Ollama, borderline q055). SIDE FINDING 2026-11-26: `regress --compare` FAILED safety (injections i08, i09 obeyed, reproduced on rerun), not caused by S5 code: top S6 item. Open (optional): per-type attribution |
 | S6 | Advanced features + ablations | DONE (2026-11-27, 202 tests, tag s6; default config UNCHANGED, adoption left to the user). Real run, one session: nothing significant (min detectable 6 net q); sanitize fixes q020 with zero side effects; routing.variants +5/-1 (3 of 5 are the targeted wrong-doc cases), wrong-doc top-4 14->4; spotlight/ollama-rerank/dept-routing DROP; calculator fixes q073 (its i08 FAIL is server flicker). Details `docs/results/S6_ablations.md` |
 | S7 | Dataset decision (optional) | SKIPPED on purpose (2026-11-28): stay on the synthetic corpus; the limit is stated in README "Limitations" |
+| S9 | Streamlit chat UI + short-term memory | NOT STARTED (brief: `docs/sections/S9_streamlit_chat_memory.md`; user will start it in a new chat; memory default OFF, v1 baseline must stay valid) |
+| S10 | Optional LangSmith tracing | NOT STARTED (brief: `docs/sections/S10_langsmith_tracing.md`; after S9; cloud, off by default) |
 | S8 | Final report + polish | DONE (2026-11-28, tag v1.0): README rewritten with measured numbers + limitations, `docs/ARCHITECTURE.md` (2 mermaid diagrams), `docs/DEMO.md`, `run_all.ps1` + `Makefile`, LICENSE (MIT), CI (offline tests), unused imports removed, 208 tests OK. Not done: optional tracing. Default config + baseline v1 UNCHANGED |
 
 ## Current state
@@ -126,8 +128,8 @@ To keep context small: one section per conversation, upload the zip (do not past
 - Skipped: S7 (decision recorded in README), optional tracing (LangSmith/Langfuse). Left unchanged: default config, baselines/v1.json, all code behaviour.
 
 ## Next
-1. USER: commit + tag v1.0, push, check the GitHub Actions run and that the mermaid diagrams render.
-2. Optional extensions (new work, not needed for v1.0): S7 dataset with fresh questions; output-side injection filter or larger injection set; adopt sanitize/routing + baseline v2; per-type attribution; tracing wrapper.
+1. S9 (Streamlit + short-term memory), then S10 (LangSmith tracing): one section per conversation; briefs in `docs/sections/`. v1.0 is tagged and complete without them.
+2. Optional (new work): S7 dataset with fresh questions; output-side injection filter or larger injection set; adopt sanitize/routing + baseline v2; per-type attribution.
 
 ## Open issues / known gaps
 - Correctness = keyword match (strict; q035 miss is partly the metric). Groundedness = token-overlap proxy (counts citation text as ungrounded). Both are crude until S4/S5.

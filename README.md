@@ -135,7 +135,12 @@ Rules (`configs/tolerances.yaml`): retrieval -0.02, generation -0.05, ACL violat
 - **Local 3B model, one machine.** Latency is only comparable on the same hardware (RTX 4050 6 GB, 16 GB RAM); p95 over 82 questions is a noisy statistic.
 - **Judge.** Moderate agreement at best, one labeler who also knows the pipeline, labels partly made with Claude's guidance, two labels changed after seeing judge output.
 - **Stand-in runs prove plumbing, not quality.** The unit tests and `--offline` runs use a stand-in server, a hash embedder and `MockLLM`; their output is never a model result.
-- **Not done:** optional LangSmith/Langfuse tracing (local JSON logs only), a 7B generator, per-type failure attribution, judge-based faithfulness, an output-side injection filter.
+- **Not done:** a chat UI and conversation memory (today `cli.py ask` answers one question at a time, see Roadmap), optional LangSmith/Langfuse tracing (local JSON logs only), a 7B generator, per-type failure attribution, judge-based faithfulness, an output-side injection filter.
+
+## Roadmap (planned, NOT built yet; v1.0 does not include any of this)
+Today the "chatbot" is one command per question: `python cli.py ask "..." --role employee`. There is no chat window and no conversation memory, so a follow-up such as "and for contractors?" is not understood. The next two sections add them without changing the evaluated defaults:
+1. **S9 - Streamlit chat UI + short-term memory** (`docs/sections/S9_streamlit_chat_memory.md`). A local browser chat with a role picker, citations and latency, plus last-N-turns memory that rewrites follow-ups into standalone questions. Memory is a config switch, **off by default**; with it off the requests are identical to v1.0 (so `baselines/v1.json` stays valid). Memory is evaluated like every other feature: a multi-turn golden set, with vs without memory, plus safety rules (the ACL applies to every rewritten turn, a role change clears the history, history is untrusted text).
+2. **S10 - Optional LangSmith tracing** (`docs/sections/S10_langsmith_tracing.md`). Off by default, API key only from an environment variable, synthetic data only (traces are uploaded to LangSmith's cloud; the free tier has a trace limit, so check pricing before enabling). A free local alternative is Langfuse self-hosted.
 
 ## Layout
 ```
